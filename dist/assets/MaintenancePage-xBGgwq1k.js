@@ -1,0 +1,6 @@
+import{c as s,a as c,j as e}from"./index-Ba-_IHuQ.js";/**
+ * @license lucide-react v0.515.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const r=[["path",{d:"M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z",key:"cbrjhi"}]],l=s("wrench",r),d=()=>{const{currentLanguage:a}=c(),t=a==="ar"?"تحت الصيانة":"Under Maintenance",n=a==="ar"?"موقعنا يخضع حاليًا للصيانة المجدولة. سنعود قريبًا. شكرا لصبرك.":"Our site is currently undergoing scheduled maintenance. We should be back shortly. Thank you for your patience.";return e.jsx("div",{className:"min-h-screen flex flex-col items-center justify-center bg-gray-50 text-center p-4",dir:a==="ar"?"rtl":"ltr",children:e.jsxs("div",{className:"animate-fade-in max-w-2xl",children:[e.jsxs("div",{className:"relative w-24 h-24 mx-auto mb-8",children:[e.jsx("div",{className:"absolute inset-0 bg-brand-accent opacity-20 rounded-full animate-pulse"}),e.jsx(l,{className:"relative h-24 w-24 text-brand-accent p-4"})]}),e.jsx("h1",{className:"text-4xl md:text-5xl font-bold text-gray-800 mb-4",children:t}),e.jsx("p",{className:"text-lg text-gray-600 mb-8",children:n})]})})};export{d as default};

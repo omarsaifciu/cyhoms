@@ -1,0 +1,1 @@
+import{u as t}from"./useQuery-D_0ZzEPi.js";import{s}from"./index-Ba-_IHuQ.js";const o=()=>t({queryKey:["contactSubjects"],queryFn:async()=>{const{data:r,error:e}=await s.from("contact_subjects").select("*").eq("is_active",!0).order("created_at",{ascending:!1});if(e)throw new Error(e.message);return r||[]}});export{o as u};

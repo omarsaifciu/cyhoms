@@ -1,0 +1,1 @@
+import{r as t,s as c}from"./index-Ba-_IHuQ.js";const l=e=>{const[r,s]=t.useState(null),[u,o]=t.useState(!0);return t.useEffect(()=>{e&&(async()=>{o(!0);const{count:a,error:n}=await c.from("property_views").select("*",{count:"exact",head:!0}).eq("property_id",e);s(n?null:a??0),o(!1)})()},[e]),{viewsCount:r,loading:u}};export{l as u};
