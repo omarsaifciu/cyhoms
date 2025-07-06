@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Featured Properties Images</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .property-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            background: #f9f9f9;
+        }
+        .property-image {
+            max-width: 200px;
+            max-height: 150px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .featured {
+            border-left: 4px solid #ffc107;
+            background: #fff8e1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Debug Featured Properties Images</h1>
+        <p>This tool checks the image data for featured properties.</p>
+        
+        <div>
+            <button onclick="debugFeaturedProperties()">🔍 Debug Featured Properties</button>
+            <button onclick="clearLog()">🗑️ Clear Log</button>
+        </div>
+        
+        <div id="log" class="log">Click "Debug Featured Properties" to start...\n</div>
+        
+        <div id="properties-display"></div>
+    </div>
+
+    <script type="module">
+        const SUPABASE_URL = "https://cuznupufbtipnqluzgbp.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1em51cHVmYnRpcG5xbHV6Z2JwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg2MDU3MjgsImV4cCI6MjA2NDE4MTcyOH0.tjQR5IMnFWppS4Ny9qiapxsPpAOiLYkjdPgE309YXng";
+        
+        let supabase;
+        
+        // Initialize Supabase
+        async function initSupabase() {
+            if (!supabase) {
+                const { createClient } = await import('https://cdn.skypack.dev/@supabase/supabase-js');
+                supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+            }
+            return supabase;
+        }
+        
+        function log(message) {
+            const logElement = document.getElementById('log');
+            logElement.textContent += message + '\n';
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(message);
+        }
+        
+        window.clearLog = function() {
+            document.getElementById('log').textContent = '';
+            document.getElementById('properties-display').innerHTML = '';
+        }
+        
+        function displayProperty(property) {
+            const container = document.getElementById('properties-display');
+            const div = document.createElement('div');
+            div.className = `property-card ${property.is_featured ? 'featured' : ''}`;
+            
+            const title = property.title_ar || property.title_en || property.title_tr || 'No title';
+            const imageUrl = property.cover_image || (Array.isArray(property.images) && property.images.length > 0 ? property.images[0] : '/placeholder.svg');
+            
+            div.innerHTML = `
+                <h3>${title} ${property.is_featured ? '⭐ FEATURED' : ''}</h3>
+                <p><strong>ID:</strong> ${property.id}</p>
+                <p><strong>Status:</strong> ${property.status}</p>
+                <p><strong>Cover Image:</strong> ${property.cover_image || 'None'}</p>
+                <p><strong>Images Array:</strong> ${Array.isArray(property.images) ? property.images.length + ' images' : 'None'}</p>
+                <p><strong>Final Image URL:</strong> ${imageUrl}</p>
+                ${imageUrl !== '/placeholder.svg' ? `<img src="${imageUrl}" alt="${title}" class="property-image" onerror="this.style.display='none'">` : '<p style="color: red;">❌ Using placeholder image</p>'}
+                <details>
+                    <summary>Raw Data</summary>
+                    <pre>${JSON.stringify(property, null, 2)}</pre>
+                </details>
+            `;
+            
+            container.appendChild(div);
+        }
+        
+        window.debugFeaturedProperties = async function() {
+            log('🔍 Debugging featured properties images...');
+            
+            try {
+                const supabase = await initSupabase();
+                
+                // Get all properties with detailed info
+                const { data: properties, error } = await supabase
+                    .from('properties')
+                    .select('*')
+                    .eq('status', 'available')
+                    .order('is_featured', { ascending: false })
+                    .order('created_at', { ascending: false });
+                
+                if (error) {
+                    log('❌ Error: ' + error.message);
+                    return;
+                }
+                
+                log(`📊 Found ${properties?.length || 0} available properties`);
+                
+                if (!properties || properties.length === 0) {
+                    log('❌ No properties found');
+                    return;
+                }
+                
+                // Filter featured properties
+                const featuredProperties = properties.filter(p => p.is_featured === true);
+                const nonFeaturedProperties = properties.filter(p => p.is_featured !== true);
+                
+                log(`⭐ Featured properties: ${featuredProperties.length}`);
+                log(`📋 Non-featured properties: ${nonFeaturedProperties.length}`);
+                
+                // Analyze image data
+                log('\n🖼️ Image Analysis:');
+                
+                featuredProperties.forEach((property, index) => {
+                    const title = property.title_ar || property.title_en || property.title_tr || 'No title';
+                    const hasCoverImage = !!property.cover_image;
+                    const hasImages = Array.isArray(property.images) && property.images.length > 0;
+                    const imageCount = Array.isArray(property.images) ? property.images.length : 0;
+                    
+                    log(`  ${index + 1}. ${title}`);
+                    log(`     - Cover Image: ${hasCoverImage ? 'Yes' : 'No'}`);
+                    log(`     - Images Array: ${imageCount} images`);
+                    log(`     - Cover URL: ${property.cover_image || 'None'}`);
+                    if (hasImages) {
+                        log(`     - First Image: ${property.images[0]}`);
+                    }
+                    log('');
+                    
+                    // Display property card
+                    displayProperty(property);
+                });
+                
+                if (featuredProperties.length === 0) {
+                    log('❌ No featured properties found!');
+                    log('💡 Make sure to set is_featured=true for some properties');
+                }
+                
+                log('🎯 Summary:');
+                log(`- Total properties: ${properties.length}`);
+                log(`- Featured properties: ${featuredProperties.length}`);
+                log(`- Featured with cover image: ${featuredProperties.filter(p => !!p.cover_image).length}`);
+                log(`- Featured with images array: ${featuredProperties.filter(p => Array.isArray(p.images) && p.images.length > 0).length}`);
+                log(`- Featured with any image: ${featuredProperties.filter(p => !!p.cover_image || (Array.isArray(p.images) && p.images.length > 0)).length}`);
+                
+            } catch (error) {
+                log('💥 Error: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

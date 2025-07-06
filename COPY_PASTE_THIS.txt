@@ -1,0 +1,9 @@
+UPDATE public.profiles SET user_type = 'agent' WHERE user_type = 'seller';
+
+ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_user_type_check;
+
+ALTER TABLE public.profiles ADD CONSTRAINT profiles_user_type_check CHECK (user_type IN ('client', 'agent', 'property_owner', 'real_estate_office', 'partner_and_site_owner', 'admin'));
+
+CREATE OR REPLACE FUNCTION public.is_seller() RETURNS boolean LANGUAGE sql SECURITY DEFINER AS $$ SELECT EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND user_type IN ('agent', 'property_owner', 'real_estate_office', 'partner_and_site_owner')); $$;
+
+CREATE OR REPLACE FUNCTION public.is_approved_seller() RETURNS boolean LANGUAGE sql SECURITY DEFINER AS $$ SELECT EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND user_type IN ('agent', 'property_owner', 'real_estate_office', 'partner_and_site_owner') AND is_approved = true); $$;

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Property Images</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .property-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            background: #f9f9f9;
+        }
+        .property-image {
+            width: 200px;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .image-placeholder {
+            width: 200px;
+            height: 150px;
+            background: #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            margin: 10px 0;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖼️ Property Images Debug Tool</h1>
+        <p>This tool helps debug property images in the database.</p>
+        
+        <div>
+            <button onclick="checkPropertyImages()">🔍 Check Property Images</button>
+            <button onclick="clearLog()">🗑️ Clear Log</button>
+        </div>
+        
+        <div id="log" class="log">Click "Check Property Images" to start debugging...\n</div>
+        <div id="properties-display"></div>
+    </div>
+
+    <script type="module">
+        const SUPABASE_URL = "https://cuznupufbtipnqluzgbp.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1em51cHVmYnRpcG5xbHV6Z2JwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg2MDU3MjgsImV4cCI6MjA2NDE4MTcyOH0.tjQR5IMnFWppS4Ny9qiapxsPpAOiLYkjdPgE309YXng";
+        
+        let supabase;
+        
+        // Initialize Supabase
+        async function initSupabase() {
+            if (!supabase) {
+                const { createClient } = await import('https://cdn.skypack.dev/@supabase/supabase-js');
+                supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+            }
+            return supabase;
+        }
+        
+        function log(message) {
+            const logElement = document.getElementById('log');
+            logElement.textContent += message + '\n';
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(message);
+        }
+        
+        window.clearLog = function() {
+            document.getElementById('log').textContent = '';
+            document.getElementById('properties-display').innerHTML = '';
+        }
+        
+        window.checkPropertyImages = async function() {
+            log('🔍 Checking property images...');
+            
+            try {
+                const supabase = await initSupabase();
+                
+                const { data: properties, error } = await supabase
+                    .from('properties')
+                    .select('id, title_ar, title_en, title_tr, cover_image, images, is_featured, status')
+                    .eq('status', 'available')
+                    .order('created_at', { ascending: false })
+                    .limit(10);
+                
+                if (error) {
+                    log('❌ Error: ' + error.message);
+                    return;
+                }
+                
+                log(`📊 Found ${properties?.length || 0} properties`);
+                
+                if (!properties || properties.length === 0) {
+                    log('❌ No properties found');
+                    return;
+                }
+                
+                const propertiesDisplay = document.getElementById('properties-display');
+                propertiesDisplay.innerHTML = '<h2>🏠 Properties with Image Details:</h2>';
+                
+                properties.forEach((property, index) => {
+                    const title = property.title_ar || property.title_en || property.title_tr || 'No title';
+                    const hasCoverImage = !!property.cover_image;
+                    const hasImages = Array.isArray(property.images) && property.images.length > 0;
+                    const imageCount = Array.isArray(property.images) ? property.images.length : 0;
+                    
+                    log(`\n🏠 Property ${index + 1}: ${title}`);
+                    log(`   - Featured: ${property.is_featured ? 'Yes' : 'No'}`);
+                    log(`   - Cover Image: ${hasCoverImage ? 'Yes' : 'No'}`);
+                    log(`   - Images Array: ${hasImages ? `Yes (${imageCount} images)` : 'No'}`);
+                    
+                    if (hasCoverImage) {
+                        log(`   - Cover Image URL: ${property.cover_image}`);
+                    }
+                    
+                    if (hasImages) {
+                        property.images.forEach((img, imgIndex) => {
+                            log(`   - Image ${imgIndex + 1}: ${img}`);
+                        });
+                    }
+                    
+                    // Create visual display
+                    const propertyDiv = document.createElement('div');
+                    propertyDiv.className = 'property-card';
+                    
+                    const finalImage = property.cover_image || (hasImages ? property.images[0] : null);
+                    
+                    propertyDiv.innerHTML = `
+                        <h3>${title} ${property.is_featured ? '⭐' : ''}</h3>
+                        <p><strong>Cover Image:</strong> ${hasCoverImage ? 'Yes' : 'No'}</p>
+                        <p><strong>Images Count:</strong> ${imageCount}</p>
+                        <p><strong>Final Image URL:</strong> ${finalImage || 'None'}</p>
+                        ${finalImage ? 
+                            `<img src="${finalImage}" alt="${title}" class="property-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                             <div class="image-placeholder" style="display:none;">Image Failed to Load</div>` :
+                            `<div class="image-placeholder">No Image Available</div>`
+                        }
+                    `;
+                    
+                    propertiesDisplay.appendChild(propertyDiv);
+                });
+                
+                // Summary
+                const withCoverImage = properties.filter(p => !!p.cover_image).length;
+                const withImages = properties.filter(p => Array.isArray(p.images) && p.images.length > 0).length;
+                const withAnyImage = properties.filter(p => !!p.cover_image || (Array.isArray(p.images) && p.images.length > 0)).length;
+                
+                log(`\n📊 Summary:`);
+                log(`   - Properties with cover_image: ${withCoverImage}/${properties.length}`);
+                log(`   - Properties with images array: ${withImages}/${properties.length}`);
+                log(`   - Properties with any image: ${withAnyImage}/${properties.length}`);
+                
+                if (withAnyImage === 0) {
+                    log('\n⚠️ WARNING: No properties have any images!');
+                    log('💡 This explains why placeholder images are showing.');
+                }
+                
+            } catch (error) {
+                log('💥 Error: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

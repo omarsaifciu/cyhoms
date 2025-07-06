@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Featured Properties</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌟 Featured Properties Debug Tool</h1>
+        <p>This tool helps debug and set featured properties in the database.</p>
+        
+        <div>
+            <button onclick="checkFeaturedProperties()">🔍 Check Featured Properties</button>
+            <button onclick="setPropertyFeatured()">⭐ Set Property as Featured</button>
+            <button onclick="clearLog()">🗑️ Clear Log</button>
+        </div>
+        
+        <div id="log" class="log">Click a button to start debugging...\n</div>
+    </div>
+
+    <script type="module">
+        const SUPABASE_URL = "https://cuznupufbtipnqluzgbp.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1em51cHVmYnRpcG5xbHV6Z2JwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg2MDU3MjgsImV4cCI6MjA2NDE4MTcyOH0.tjQR5IMnFWppS4Ny9qiapxsPpAOiLYkjdPgE309YXng";
+        
+        let supabase;
+        
+        // Initialize Supabase
+        async function initSupabase() {
+            if (!supabase) {
+                const { createClient } = await import('https://cdn.skypack.dev/@supabase/supabase-js');
+                supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+            }
+            return supabase;
+        }
+        
+        function log(message) {
+            const logElement = document.getElementById('log');
+            logElement.textContent += message + '\n';
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(message);
+        }
+        
+        window.clearLog = function() {
+            document.getElementById('log').textContent = '';
+        }
+        
+        window.checkFeaturedProperties = async function() {
+            log('🔍 Checking featured properties...');
+            
+            try {
+                const supabase = await initSupabase();
+                
+                const { data: allProps, error } = await supabase
+                    .from('properties')
+                    .select('id, title_ar, title_en, title_tr, is_featured, status, city')
+                    .order('created_at', { ascending: false });
+                
+                if (error) {
+                    log('❌ Error: ' + error.message);
+                    return;
+                }
+                
+                const total = allProps?.length || 0;
+                const featured = allProps?.filter(p => p.is_featured === true) || [];
+                const available = allProps?.filter(p => p.status === 'available') || [];
+                const featuredAvailable = allProps?.filter(p => p.is_featured === true && p.status === 'available') || [];
+                
+                log(`📊 Total properties: ${total}`);
+                log(`🌟 Featured properties: ${featured.length}`);
+                log(`✅ Available properties: ${available.length}`);
+                log(`🎯 Featured + Available: ${featuredAvailable.length}`);
+                
+                if (featured.length > 0) {
+                    log('\n📋 Featured properties:');
+                    featured.forEach(p => {
+                        const title = p.title_ar || p.title_en || p.title_tr || 'No title';
+                        log(`  - ${title} (${p.status}) - Featured: ${p.is_featured}`);
+                    });
+                }
+                
+                if (featuredAvailable.length === 0) {
+                    log('\n⚠️ No featured+available properties found!');
+                    if (available.length > 0) {
+                        log('💡 Suggestion: Click "Set Property as Featured" to fix this.');
+                    }
+                }
+                
+            } catch (error) {
+                log('💥 Error: ' + error.message);
+            }
+        }
+        
+        window.setPropertyFeatured = async function() {
+            log('⭐ Setting property as featured...');
+            
+            try {
+                const supabase = await initSupabase();
+                
+                // Get available non-featured properties
+                const { data: availableProps, error } = await supabase
+                    .from('properties')
+                    .select('id, title_ar, title_en, title_tr, is_featured, status, city')
+                    .eq('status', 'available')
+                    .eq('is_featured', false)
+                    .limit(1);
+                
+                if (error) {
+                    log('❌ Error: ' + error.message);
+                    return;
+                }
+                
+                if (!availableProps || availableProps.length === 0) {
+                    log('❌ No available non-featured properties found');
+                    return;
+                }
+                
+                const propertyToFeature = availableProps[0];
+                const title = propertyToFeature.title_ar || propertyToFeature.title_en || propertyToFeature.title_tr || 'No title';
+                
+                log(`🎯 Setting "${title}" as featured...`);
+                
+                const { error: updateError } = await supabase
+                    .from('properties')
+                    .update({ is_featured: true })
+                    .eq('id', propertyToFeature.id);
+                
+                if (updateError) {
+                    log('❌ Update error: ' + updateError.message);
+                    return;
+                }
+                
+                log(`✅ Successfully set "${title}" as featured!`);
+                log('🔄 Property is now featured. Check the main app to see changes.');
+                
+            } catch (error) {
+                log('💥 Error: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

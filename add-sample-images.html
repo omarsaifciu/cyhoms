@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Sample Images to Properties</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖼️ Add Sample Images to Properties</h1>
+        <p>This tool adds sample images to properties that don't have images.</p>
+        
+        <div>
+            <button onclick="checkAndAddImages()">🖼️ Check & Add Sample Images</button>
+            <button onclick="clearLog()">🗑️ Clear Log</button>
+        </div>
+        
+        <div id="log" class="log">Click "Check & Add Sample Images" to start...\n</div>
+    </div>
+
+    <script type="module">
+        const SUPABASE_URL = "https://cuznupufbtipnqluzgbp.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1em51cHVmYnRpcG5xbHV6Z2JwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg2MDU3MjgsImV4cCI6MjA2NDE4MTcyOH0.tjQR5IMnFWppS4Ny9qiapxsPpAOiLYkjdPgE309YXng";
+        
+        // Sample property images from Unsplash
+        const sampleImages = [
+            "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&h=600&fit=crop",
+            "https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=800&h=600&fit=crop",
+            "https://images.unsplash.com/photo-1605146769289-440113cc3d00?w=800&h=600&fit=crop",
+            "https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?w=800&h=600&fit=crop",
+            "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800&h=600&fit=crop",
+            "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=600&fit=crop",
+            "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&h=600&fit=crop",
+            "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&h=600&fit=crop",
+            "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800&h=600&fit=crop",
+            "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=800&h=600&fit=crop"
+        ];
+        
+        let supabase;
+        
+        // Initialize Supabase
+        async function initSupabase() {
+            if (!supabase) {
+                const { createClient } = await import('https://cdn.skypack.dev/@supabase/supabase-js');
+                supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+            }
+            return supabase;
+        }
+        
+        function log(message) {
+            const logElement = document.getElementById('log');
+            logElement.textContent += message + '\n';
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(message);
+        }
+        
+        window.clearLog = function() {
+            document.getElementById('log').textContent = '';
+        }
+        
+        function getRandomImages(count = 3) {
+            const shuffled = [...sampleImages].sort(() => 0.5 - Math.random());
+            return shuffled.slice(0, count);
+        }
+        
+        window.checkAndAddImages = async function() {
+            log('🔍 Checking properties without images...');
+            
+            try {
+                const supabase = await initSupabase();
+                
+                // Get properties without images
+                const { data: properties, error } = await supabase
+                    .from('properties')
+                    .select('id, title_ar, title_en, title_tr, cover_image, images, is_featured, status')
+                    .eq('status', 'available')
+                    .order('created_at', { ascending: false });
+                
+                if (error) {
+                    log('❌ Error: ' + error.message);
+                    return;
+                }
+                
+                log(`📊 Found ${properties?.length || 0} available properties`);
+                
+                if (!properties || properties.length === 0) {
+                    log('❌ No properties found');
+                    return;
+                }
+                
+                // Filter properties without images
+                const propertiesWithoutImages = properties.filter(p => {
+                    const hasCoverImage = !!p.cover_image;
+                    const hasImages = Array.isArray(p.images) && p.images.length > 0;
+                    return !hasCoverImage && !hasImages;
+                });
+                
+                const propertiesWithImages = properties.filter(p => {
+                    const hasCoverImage = !!p.cover_image;
+                    const hasImages = Array.isArray(p.images) && p.images.length > 0;
+                    return hasCoverImage || hasImages;
+                });
+                
+                log(`📊 Properties without images: ${propertiesWithoutImages.length}`);
+                log(`📊 Properties with images: ${propertiesWithImages.length}`);
+                
+                if (propertiesWithoutImages.length === 0) {
+                    log('✅ All properties already have images!');
+                    
+                    // Show details of properties with images
+                    log('\n🖼️ Properties with images:');
+                    propertiesWithImages.forEach((p, index) => {
+                        const title = p.title_ar || p.title_en || p.title_tr || 'No title';
+                        const hasCover = !!p.cover_image;
+                        const imageCount = Array.isArray(p.images) ? p.images.length : 0;
+                        log(`  ${index + 1}. ${title} ${p.is_featured ? '⭐' : ''}`);
+                        log(`     - Cover: ${hasCover ? 'Yes' : 'No'}`);
+                        log(`     - Images: ${imageCount}`);
+                        if (hasCover) {
+                            log(`     - Cover URL: ${p.cover_image}`);
+                        }
+                    });
+                    
+                    return;
+                }
+                
+                log(`\n🔧 Adding sample images to ${propertiesWithoutImages.length} properties...`);
+                
+                // Add images to properties without images
+                for (let i = 0; i < propertiesWithoutImages.length; i++) {
+                    const property = propertiesWithoutImages[i];
+                    const title = property.title_ar || property.title_en || property.title_tr || 'No title';
+                    
+                    log(`\n⏳ Processing: ${title} ${property.is_featured ? '⭐' : ''}`);
+                    
+                    const randomImages = getRandomImages(3);
+                    const coverImage = randomImages[0];
+                    
+                    const { error: updateError } = await supabase
+                        .from('properties')
+                        .update({
+                            cover_image: coverImage,
+                            images: randomImages
+                        })
+                        .eq('id', property.id);
+                    
+                    if (updateError) {
+                        log(`❌ Error updating ${property.id}: ${updateError.message}`);
+                    } else {
+                        log(`✅ Added images to "${title}"`);
+                        log(`   - Cover: ${coverImage}`);
+                        log(`   - Total images: ${randomImages.length}`);
+                    }
+                    
+                    // Small delay to avoid rate limiting
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+                
+                log('\n🎉 Done! Refresh the main app to see the images.');
+                log('🔄 You can run: location.reload() in the main app');
+                
+            } catch (error) {
+                log('💥 Error: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
