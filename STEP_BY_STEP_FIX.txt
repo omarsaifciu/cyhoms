@@ -1,0 +1,17 @@
+-- Step 1: Check current data
+SELECT user_type, COUNT(*) FROM public.profiles GROUP BY user_type;
+
+-- Step 2: Update seller to agent
+UPDATE public.profiles SET user_type = 'agent' WHERE user_type = 'seller';
+
+-- Step 3: Check for invalid data
+SELECT user_type, COUNT(*) FROM public.profiles WHERE user_type NOT IN ('client', 'agent', 'property_owner', 'real_estate_office', 'partner_and_site_owner', 'admin') GROUP BY user_type;
+
+-- Step 4: Fix any invalid data (replace 'invalid_type' with actual invalid types found)
+-- UPDATE public.profiles SET user_type = 'client' WHERE user_type = 'invalid_type';
+
+-- Step 5: Drop old constraint
+ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_user_type_check;
+
+-- Step 6: Add new constraint
+ALTER TABLE public.profiles ADD CONSTRAINT profiles_user_type_check CHECK (user_type IN ('client', 'agent', 'property_owner', 'real_estate_office', 'partner_and_site_owner', 'admin'));
