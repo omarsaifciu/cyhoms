@@ -1,0 +1,3 @@
+
+ALTER TABLE public.profiles
+ADD COLUMN is_suspended BOOLEAN NOT NULL DEFAULT FALSE;
